@@ -1,0 +1,3 @@
+---
+# defaults file for geo_db
+postgres_version: 12

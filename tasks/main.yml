@@ -1,0 +1,94 @@
+---
+# tasks file for geo_db
+- name: "Upgrade all packages"
+  yum:
+    name: '*'
+    state: latest
+    update_cache: true
+
+- name: Add repository pgdg
+  yum_repository:
+    name: pgdg12
+    description: Postgresql {{ postgres_version }} repo
+    baseurl: https://download.postgresql.org/pub/repos/yum/{{ postgres_version }}/redhat/rhel-7-x86_64
+    gpgcheck: no
+    enabled: yes
+
+- name: "Install packages"
+  yum:
+    name:
+      - postgresql{{ postgres_version }}
+      - postgresql{{ postgres_version }}-server
+      - python3
+      - python-pip
+      - python3-pip
+    update_cache: true
+    state: latest
+
+- name: "Install Python packages"
+  pip:
+    name: psycopg2-binary
+    state: present
+
+#MAIN TASK
+- name: "Find out if PostgreSQL is initialized"
+  ansible.builtin.stat:
+    path: "/var/lib/pgsql/{{ postgres_version }}/data/pg_hba.conf"
+  register: postgres_data
+
+- name: "Initialize PostgreSQL"
+  shell: "postgresql-{{ postgres_version }}-setup initdb"
+  when: not postgres_data.stat.exists
+
+- name: "Start and enable services"
+  service: "name={{ item }} state=started enabled=yes"
+  with_items:
+    - postgresql-{{ postgres_version }}
+
+- name: Create first database
+  postgresql_db:
+    state: present
+    name: "{{ db_name }}"
+  become: true
+  become_user: postgres
+
+- name: "Create db user"
+  postgresql_user:
+    state: present
+    name: "{{ db_user }}"
+    password: "{{ db_password }}"
+  become: true
+  become_user: postgres
+  no_log: true
+
+- name: "Grant db user access to app db"
+  postgresql_privs:
+    type: database
+    database: "{{ db_name }}"
+    roles: "{{ db_user }}"
+    grant_option: no
+    privs: all
+  become: true
+  become_user: postgres
+
+- name: "Allow md5 connection for the db user"
+  postgresql_pg_hba:
+    dest: "~/{{ postgres_version }}/data/pg_hba.conf"
+    contype: host
+    databases: all
+    method: md5
+    users: "{{ db_user }}"
+    address: samenet
+    create: true
+  become: true
+  become_user: postgres
+  notify: restart postgres
+
+- name: Set listen addresses to host address
+  postgresql_set:
+    name: listen_addresses
+    value: "*"
+  register: set
+  become: true
+  become_user: postgres
+  notify: restart postgres
