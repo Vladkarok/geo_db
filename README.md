@@ -6,7 +6,7 @@ This role installing PostgreSQL server (default version 12), creates user, datab
 Requirements
 ------------
 
-Tested in AWS EC2, other environment does not guarantee proper working, but you can test.
+Tested in AWS EC2, other environment does not guarantee proper working, but you can test.  
 Role Variables
 --------------
 
