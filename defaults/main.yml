@@ -1,3 +1,4 @@
 ---
 # defaults file for geo_db
 postgres_version: 12
+db_network: "10.255.0.0/16
