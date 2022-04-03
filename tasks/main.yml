@@ -78,7 +78,7 @@
     databases: all
     method: md5
     users: "{{ db_user }}"
-    address: samenet
+    address: "{{ db_network }}"
     create: true
   become: true
   become_user: postgres
